@@ -25,9 +25,9 @@ typedef int (* proc)(int i, void *data);
 int echo(int i,void *data) {
 	int len;
 	char tmp[1024];
-	memset(tmp,0L,1024);
+	memset(tmp,'\0',1024);
 	len=recv(i,tmp,1024,MSG_DONTWAIT);
-	fprintf(stderr,"%s\n",tmp);
+	if (len==0) return len;
 	send(i,tmp,len,MSG_DONTWAIT);
   return len;
 }
@@ -66,11 +66,12 @@ int socket_init(struct hostent *h, int port,proc proc_fun) {
 						TESTERR(((sock=accept(channel,(struct sockaddr *) &saddr_cl,&len))==-1),"Errore in accept")
 					FD_SET(sock,&ms);
 					fprintf(stderr,"indirizzo client  %s\n",inet_ntoa(saddr_cl.sin_addr));
-					fprintf(stderr,"porta client  %d\n",ntohs(saddr_cl.sin_port));
+					fprintf(stderr,"porta client  %d socket %d\n",ntohs(saddr_cl.sin_port),sock);
 				}
 				else {
-					if (proc_fun(i,NULL)<0) {
+					if (proc_fun(i,NULL)==0) {
 						close(i);
+						fprintf(stderr,"cliente disconnesso socket %i\n",i);
 						FD_CLR(i,&ms);
 					}
 				}

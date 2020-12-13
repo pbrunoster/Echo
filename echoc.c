@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #define TESTERR( X, M) \
 	if X { \
@@ -31,21 +32,23 @@ int socket_connect(struct hostent *h, int port,proc proc_fun) {
 	saddr.sin_addr.s_addr= *(unsigned int *)(h->h_addr_list[0]);
 	int channel=socket(AF_INET,SOCK_STREAM,0); 
 	TESTERR((setsockopt(channel,SOL_SOCKET,SO_LINGER,(const void *) &lin,sizeof lin)!=0),"SOCK LINGER FALLITO ")
-		TESTERR((connect(channel, (const struct sockaddr *) &saddr, sizeof saddr)==0),"Errore in Connect")
+		TESTERR((connect(channel, (const struct sockaddr *) &saddr, sizeof saddr)==-1),"Errore in Connect")
 		FD_ZERO(&ms);
 	FD_SET(channel,&ms);
-	FD_SET(0,&ms);
+	FD_SET(STDIN_FILENO,&ms);
 	while(1) {
 		memcpy(&ws,&ms,sizeof ms);
 		TESTERR(((num=select(FD_SETSIZE,&ws,NULL,NULL,NULL))<0),"Errore in select")
 			for (int i=0;i<FD_SETSIZE;i++) {
+				if (FD_ISSET(i,&ws)) {
+					memset(msg,'\0',1024);
 				if (i==channel) {
 					len=recv(i,msg,1024,MSG_DONTWAIT);
-					msg[len+1]='\0';
-					fprintf(stderr,"messaggio ricevuto  %s\n",msg);
+				  fprintf(stderr,"ricevuto da server %s\n",msg);
 				} else {
-					len=recv(i,msg,1024,MSG_DONTWAIT);
+					len=read(i,msg,1024);
 					send(channel,msg,len,MSG_DONTWAIT);
+				}
 				}
 			}
 	}
